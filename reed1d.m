@@ -4,9 +4,13 @@ N = T/dt + 1;
 t = linspace(0, T, N);
 u_approx = zeros(1, N);
 v_approx = zeros(1, N);
+u_taylor = zeros(1, N);
+v_taylor = zeros(1, N);
 % ICs
 u_approx(1) = 0.2;
 v_approx(1) = 0.8;
+u_taylor(1) = u_approx(1);
+v_taylor(1) = v_approx(1);
 
 % Euler's Method
 for n = 1:N-1
@@ -29,8 +33,8 @@ dv = dv ./ magnitude;
 figure;
 quiver(u, v, du, dv, 'k'); hold on;
 
-plot(u_approx, v_approx, 'r', 'LineWidth', 1.5);
-plot(u_approx(1), v_approx(1), 'ro', 'MarkerFaceColor', 'r'); % Initial point
+plot(u_approx, v_approx, 'r', 'LineWidth', 1.5, 'DisplayName', 'Euler');
+plot(u_approx(1), v_approx(1), 'ro', 'MarkerFaceColor', 'r');
 
 xlabel('u'); ylabel('v');
 title('Part (d): Eulers Method for t \in [0,8]');
