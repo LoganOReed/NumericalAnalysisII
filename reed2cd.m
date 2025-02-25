@@ -7,8 +7,8 @@ v_approx = zeros(1, N);
 u_taylor = zeros(1, N);
 v_taylor = zeros(1, N);
 % ICs
-u_approx(1) = 0.2;
-v_approx(1) = 0.8;
+u_approx(1) = 0.25;
+v_approx(1) = 0.25;
 u_taylor(1) = u_approx(1);
 v_taylor(1) = v_approx(1);
 
