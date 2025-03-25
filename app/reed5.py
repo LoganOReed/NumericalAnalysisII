@@ -174,29 +174,34 @@ if __name__ == "__main__":
     tspan = [0, 1]
     u0 = np.array([2,0,1,0])
 
-    h = {}
-    h["fe"] = findStep(f, u0, tspan, fe)
-    h["be"] = findStep(f, u0, tspan, be)
-    h["rk4"] = findStep(f, u0, tspan, rk4)
-    h["cn"] = findStep(f, u0, tspan, cn)
-    h["ab"] = findStep(f, u0, tspan, ab)
-    h["am"] = findStep(f, u0, tspan, am)
-    h["bdf2"] = findStep(f, u0, tspan, bdf2)
-    h["bdf4"] = findStep(f, u0, tspan, bdf4)
-
-    fout = "./steps.txt"
-    fo = open(fout, "w")
-
-    for k, v in h.items():
-        fo.write(str(k) + '\t' + str(v) + '\n')
-    fo.close()
+    # h = {}
+    # h["fe"] = findStep(f, u0, tspan, fe)
+    # h["be"] = findStep(f, u0, tspan, be)
+    # h["rk4"] = findStep(f, u0, tspan, rk4)
+    # h["cn"] = findStep(f, u0, tspan, cn)
+    # h["ab"] = findStep(f, u0, tspan, ab)
+    # h["am"] = findStep(f, u0, tspan, am)
+    # h["bdf2"] = findStep(f, u0, tspan, bdf2)
+    # h["bdf4"] = findStep(f, u0, tspan, bdf4)
+    #
+    # fout = "./steps.txt"
+    # fo = open(fout, "w")
+    #
+    # for k, v in h.items():
+    #     fo.write(str(k) + '\t' + str(v) + '\n')
+    # fo.close()
 
     # when hardcoded h is desired
-    # h = {
-    #         "fe": 1e-4,
-    #         "be": 1e-3,
-    #         "rk4": 2.5e-4,
-    #         }
+    h = {
+            "fe":	0.00019995342902019621,
+            "be":	0.0010252355350650847,
+            "rk4":	0.00027849588101431724,
+            "cn":	0.010945369696036728,
+            "ab":	0.0001000025001473725,
+            "am":	0.0005991655690036715,
+            "bdf2":	0.03431726929393187,
+            "bdf4":	0.04101112199843749
+            }
     
     t = {}
     u = {}
@@ -204,11 +209,39 @@ if __name__ == "__main__":
     name = ["fe", "be", "rk4", "cn", "ab", "am", "bdf2", "bdf4"]
     func = [fe, be, rk4, cn, ab, am, bdf2, bdf4]
 
-    for i in range(len(name)):
-        u[name[i]], t[name[i]] = solveIVP(f, u0, tspan, h[name[i]], func[i])
-        error[name[i]] = errorNorm(u[name[i]], t[name[i]])
-        print(f"{name[i]} h={h[name[i]]} \n\t Final Error: {error[name[i]][-1]}")
+    # for i in range(len(name)):
+    #     u[name[i]], t[name[i]] = solveIVP(f, u0, tspan, h[name[i]], func[i])
+    #     error[name[i]] = errorNorm(u[name[i]], t[name[i]])
+    #     print(f"{name[i]} h={h[name[i]]} \n\t Final Error: {error[name[i]][-1]}")
 
+    # for part d
+    h_be = h["be"]
+    for i in range(len(name)):
+        u[name[i]], t[name[i]] = solveIVP(f, u0, tspan, h_be, func[i])
+        error[name[i]] = errorNorm(u[name[i]], t[name[i]])
+        print(f"{name[i]} h={h_be} \n\t Final Error: {error[name[i]][-1]}")
+
+    # One plot per method: u_i vs t with true solution dotted
+    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
+    labels = [r"$u_1$", r"$u_2$", r"$u_3$", r"$u_4$"]
+
+    t_true = np.arange(tspan[0], tspan[1] + h_be, h_be)
+    u_true = uTrue(None, t_true)
+
+    for method in name:
+        fig, ax = plt.subplots(figsize=(8, 5))
+        for i in range(4):
+            ax.plot(t[method], u[method][:, i], color=colors[i], label=labels[i])
+        for i in range(4):
+            ax.plot(t_true, u_true[:, i], linestyle='dotted', color=colors[i], label=labels[i] + " (true)")
+        ax.set_title(f"Method: {method.upper()}")
+        ax.set_xlabel("Time $t$")
+        ax.set_ylabel("$u_i(t)$")
+        ax.set_ylim([-2, 2])
+        ax.legend()
+        ax.grid(True)
+        plt.tight_layout()
+        plt.savefig(f"{method}.png")
 
     # fig, ax = plt.subplots(figsize=(8, 6))
     # plt.plot(t["fe"], error["fe"], "bo-", label="Euler")
