@@ -12,8 +12,13 @@ def solveIVP(f, u0, tspan, h, solver):
     t[0] = tspan[0]
     u[0,:] = u0
 
-    for n in range(len(t) - 1):
-        u[n+1,:] = solver(f, u[n,:], t[n], h)
+    if (solver == ab or solver == am):
+        u[1,:] = uTrue(None, h)
+        for n in range(1, len(t) - 1):
+            u[n+1,:] = solver(f, u[n,:], t[n], h, u[n-1,:])
+    else:
+        for n in range(len(t) - 1):
+            u[n+1,:] = solver(f, u[n,:], t[n], h)
     return u, t
 
 def fe(f, u, t, h):
@@ -51,8 +56,22 @@ def cn(f, u, t, h):
         return res.x
 
 # Adams-Bashforth (with n-1 true solutions)
+def ab(f, u, t, h, uprev):
+    """Adams-Bashforth 2 (with k-1 true solutions)."""
+    return u + 0.5* h * ( 3*f(u,t) - f(uprev, t - h))
 
 # Adams-Moulton (with n-1 true solutions)
+def am(f, u, t, h, uprev):
+    """Adams-Moulton 2 (with k-1 true solutions)."""
+    g = lambda x: x - u - (1.0/12.0)*h*(8*f(u,t) + 5*f(x,t+h) - f(uprev,t-h))
+    res = sp.optimize.root(g, u, tol=1e-9)
+    if not res.success:
+        print("am failed")
+        return u
+    else:
+        return res.x
+
+
 
 # BDF2
 
@@ -101,7 +120,9 @@ if __name__ == "__main__":
     h["be"] = findStep(f, u0, tspan, be)
     h["rk4"] = findStep(f, u0, tspan, rk4)
     h["cn"] = findStep(f, u0, tspan, cn)
-    print(h["cn"])
+    h["ab"] = findStep(f, u0, tspan, ab)
+    h["am"] = findStep(f, u0, tspan, am)
+    print(h["am"])
 
 
     # when hardcoded h is desired
@@ -114,8 +135,8 @@ if __name__ == "__main__":
     t = {}
     u = {}
     error = {}
-    name = ["fe", "be", "rk4", "cn"]
-    func = [fe, be, rk4, cn]
+    name = ["fe", "be", "rk4", "cn", "ab", "am"]
+    func = [fe, be, rk4, cn, ab, am]
 
     for i in range(len(name)):
         u[name[i]], t[name[i]] = solveIVP(f, u0, tspan, h[name[i]], func[i])
