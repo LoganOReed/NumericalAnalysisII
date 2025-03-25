@@ -16,6 +16,12 @@ def solveIVP(f, u0, tspan, h, solver):
         u[1,:] = uTrue(None, h)
         for n in range(1, len(t) - 1):
             u[n+1,:] = solver(f, u[n,:], t[n], h, u[n-1,:])
+    elif (solver == bdf4):
+        u[1,:] = uTrue(None,t[0] + h)
+        u[2,:] = uTrue(None,t[0] + 2*h)
+        u[3,:] = uTrue(None, t[0] + 3*h)
+        for n in range(3, len(t) - 1):
+            u[n+1,:] = solver(f, u[n,:], t[n], h, [u[n-1,:],u[n-2,:],u[n-3,:]])
     else:
         for n in range(len(t) - 1):
             u[n+1,:] = solver(f, u[n,:], t[n], h)
@@ -92,6 +98,17 @@ def bdf2(f, u, t, h):
     return y3
 
 # BDF4
+def bdf4(f,u,t,h,uprevs):
+    """BDF4."""
+    g = lambda x: 25*x - 48*u + 36*uprevs[0] - 16*uprevs[1] +3*uprevs[2] - 12*h*f(x,t+h)
+    res = sp.optimize.root(g, u, tol=1e-9)
+    if not res.success:
+        print("bdf4 failed")
+        return u
+    else:
+        return res.x
+
+   
 
 def f(u, t):
     A = np.array([[-5000,4999,0,0],
@@ -117,7 +134,7 @@ def errorNorm( u, t):
 
 def findStep(f, u0, tspan, solver, tol=0.05):
     """Bisection to find max step size for error < 5%"""
-    h = 0.1
+    h = 1.0
     error = 1000
     while (np.isnan(error)) or error >= 0.05:
         h = h / 10
@@ -139,7 +156,8 @@ if __name__ == "__main__":
     h["ab"] = findStep(f, u0, tspan, ab)
     h["am"] = findStep(f, u0, tspan, am)
     h["bdf2"] = findStep(f, u0, tspan, bdf2)
-    print(h["bdf2"])
+    h["bdf4"] = findStep(f, u0, tspan, bdf4)
+    print(h["bdf4"])
 
 
     # when hardcoded h is desired
@@ -152,8 +170,8 @@ if __name__ == "__main__":
     t = {}
     u = {}
     error = {}
-    name = ["fe", "be", "rk4", "cn", "ab", "am", "bdf2"]
-    func = [fe, be, rk4, cn, ab, am, bdf2]
+    name = ["fe", "be", "rk4", "cn", "ab", "am", "bdf2", "bdf4"]
+    func = [fe, be, rk4, cn, ab, am, bdf2, bdf4]
 
     for i in range(len(name)):
         u[name[i]], t[name[i]] = solveIVP(f, u0, tspan, h[name[i]], func[i])
