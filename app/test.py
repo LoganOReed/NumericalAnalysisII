@@ -74,6 +74,22 @@ def am(f, u, t, h, uprev):
 
 
 # BDF2
+def bdf2(f, u, t, h):
+    """BDF2."""
+    y1 = u
+    y2 = lambda x: x - u - (1.0/4.0)*h*(f(u,t) + f(x,t+0.5*h))
+    res = sp.optimize.root(y2, u, tol=1e-9)
+    if not res.success:
+        print("bdf2 y2 failed")
+        return u
+    y2 = res.x
+    y3 = lambda x: x - u - (1.0/3.0)*h*(f(u,t) + f(y2,t+0.5*h) + f(x,t+h))
+    res = sp.optimize.root(y3, u, tol=1e-9)
+    if not res.success:
+        print("bdf2 y3 failed")
+        return u
+    y3 = res.x
+    return y3
 
 # BDF4
 
@@ -122,7 +138,8 @@ if __name__ == "__main__":
     h["cn"] = findStep(f, u0, tspan, cn)
     h["ab"] = findStep(f, u0, tspan, ab)
     h["am"] = findStep(f, u0, tspan, am)
-    print(h["am"])
+    h["bdf2"] = findStep(f, u0, tspan, bdf2)
+    print(h["bdf2"])
 
 
     # when hardcoded h is desired
@@ -135,8 +152,8 @@ if __name__ == "__main__":
     t = {}
     u = {}
     error = {}
-    name = ["fe", "be", "rk4", "cn", "ab", "am"]
-    func = [fe, be, rk4, cn, ab, am]
+    name = ["fe", "be", "rk4", "cn", "ab", "am", "bdf2"]
+    func = [fe, be, rk4, cn, ab, am, bdf2]
 
     for i in range(len(name)):
         u[name[i]], t[name[i]] = solveIVP(f, u0, tspan, h[name[i]], func[i])
