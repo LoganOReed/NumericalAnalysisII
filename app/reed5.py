@@ -134,13 +134,39 @@ def errorNorm( u, t):
 
 def findStep(f, u0, tspan, solver, tol=0.05):
     """Bisection to find max step size for error < 5%"""
-    h = 1.0
-    error = 1000
-    while (np.isnan(error)) or error >= 0.05:
-        h = h / 10
-        u, t = solveIVP(f, u0, tspan, h, solver)
-        error = np.linalg.norm(uTrue(None,t[-1]) - u[-1,:], axis=1)
-    return h
+    a = 1e-7
+    b = 1e-1
+    tol = 1e-9
+    maxIter = 100
+    u, t = solveIVP(f, u0, tspan, b, solver)
+    error = np.linalg.norm(uTrue(None,t[-1]) - u[-1,:], axis=1) - 0.05
+    if np.isnan(error):
+        error = 1e5
+    i = 1
+    while i <= maxIter:
+        c = (a + b) / 2
+        u, t = solveIVP(f, u0, tspan, c, solver)
+        error = np.linalg.norm(uTrue(None,t[-1]) - u[-1,:], axis=1) - 0.05
+        if np.isnan(error):
+            error = 1e5
+        if error == 0 or (b-a)/2 < tol:
+            return c
+        i = i + 1
+        if error > 0:
+            b = c
+        else:
+            a = c
+    print("could not find root within step limit")
+    # while (np.isnan(error)) or error >= 0.05:
+    #     if np.isnan(error):
+    #         error = 1e5
+    #
+    #     h = h / 2
+    #     u, t = solveIVP(f, u0, tspan, h, solver)
+    #     error = np.linalg.norm(uTrue(None,t[-1]) - u[-1,:], axis=1)
+    # return h
+
+        
 
 if __name__ == "__main__":
 
@@ -157,8 +183,13 @@ if __name__ == "__main__":
     h["am"] = findStep(f, u0, tspan, am)
     h["bdf2"] = findStep(f, u0, tspan, bdf2)
     h["bdf4"] = findStep(f, u0, tspan, bdf4)
-    print(h["bdf4"])
 
+    fout = "./steps.txt"
+    fo = open(fout, "w")
+
+    for k, v in h.items():
+        fo.write(str(k) + '\t' + str(v) + '\n')
+    fo.close()
 
     # when hardcoded h is desired
     # h = {
