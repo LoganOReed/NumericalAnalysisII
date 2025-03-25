@@ -14,7 +14,7 @@ def solveIVP(f, u0, tspan, h, solver):
 
     for n in range(len(t) - 1):
         u[n+1,:] = solver(f, u[n,:], t[n], h)
-    return t, u
+    return u, t
 
 def fe(f, u, t, h):
     """Forward Euler."""
@@ -22,7 +22,7 @@ def fe(f, u, t, h):
 
 # back euler
 def be(f, u, t, h):
-    """Backwards Euler (Newton)."""
+    """Backwards Euler."""
     g = lambda x: x - u - h*f(x,t+h)
     res = sp.optimize.root(g, u, tol=1e-9)
     if not res.success:
@@ -33,13 +33,22 @@ def be(f, u, t, h):
 
 
 def rk4(f, u, t, h):
-    k1 = f(t, y)
-    k2 = f(t + 0.5 * h, y + 0.5 * h * k1)
-    k3 = f(t + 0.5 * h, y + 0.5 * h * k2)
-    k4 = f(t + h, y + h * k3)
-    return y + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+    k1 = f(u, t)
+    k2 = f(u + 0.5 * h * k1, t + 0.5 * h)
+    k3 = f(u + 0.5 * h * k2, t + 0.5 * h)
+    k4 = f(u + h * k3, t + h)
+    return u + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
 
 # crank nicolson
+def cn(f, u, t, h):
+    """Crank Nicolson."""
+    g = lambda x: x - u - 0.5*h*(f(u,t) + f(x,t+h))
+    res = sp.optimize.root(g, u, tol=1e-9)
+    if not res.success:
+        print("cn failed")
+        return u
+    else:
+        return res.x
 
 # Adams-Bashforth (with n-1 true solutions)
 
@@ -66,43 +75,59 @@ def uTrue(u,t):
     ])
     return ut
 
-def errorNorm(uTrue, u, t):
+def errorNorm( u, t):
     """get the 2norm of the difference of approx and true solutions."""
     return np.linalg.norm(uTrue(None, t) - u, axis=1)
     
+
+def findStep(f, u0, tspan, solver, tol=0.05):
+    """Bisection to find max step size for error < 5%"""
+    h = 0.1
+    error = 1000
+    while (np.isnan(error)) or error >= 0.05:
+        h = h / 10
+        u, t = solveIVP(f, u0, tspan, h, solver)
+        error = np.linalg.norm(uTrue(None,t[-1]) - u[-1,:], axis=1)
+    return h
 
 if __name__ == "__main__":
 
     # Define IVP parameters
     tspan = [0, 1]
     u0 = np.array([2,0,1,0])
-    h = {
-            "fe": 1e-4,
-            "be": 1e-3,
-            "rk4": 2.5e-4,
-            }
+
+    h = {}
+    h["fe"] = findStep(f, u0, tspan, fe)
+    h["be"] = findStep(f, u0, tspan, be)
+    h["rk4"] = findStep(f, u0, tspan, rk4)
+    h["cn"] = findStep(f, u0, tspan, cn)
+    print(h["cn"])
+
+
+    # when hardcoded h is desired
+    # h = {
+    #         "fe": 1e-4,
+    #         "be": 1e-3,
+    #         "rk4": 2.5e-4,
+    #         }
     
     t = {}
     u = {}
     error = {}
-    # name = ["fe", "be", "rk4"]
-    # func = [fe, be, rk4]
-    name = ["fe", "be"]
-    func = [fe, be]
+    name = ["fe", "be", "rk4", "cn"]
+    func = [fe, be, rk4, cn]
+
     for i in range(len(name)):
-        t[name[i]], u[name[i]] = solveIVP(f, u0, tspan, h[name[i]], func[i])
-        error[name[i]] = errorNorm(uTrue, u[name[i]], t[name[i]])
+        u[name[i]], t[name[i]] = solveIVP(f, u0, tspan, h[name[i]], func[i])
+        error[name[i]] = errorNorm(u[name[i]], t[name[i]])
         print(f"{name[i]} h={h[name[i]]} \n\t Final Error: {error[name[i]][-1]}")
-    # print(f"FE h={h['fe']} \n\t Final Error: {error['fe'][-1]}")
-    # print(f"BE h={h['be']} \n\t Final Error: {error['be'][-1]}")
 
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    plt.plot(t["fe"], error["fe"], "bo-", label="Euler")
-    plt.plot(t["be"], error["be"], "ro-", label="Back Euler")
-    # plt.plot(t3, u3, "go-", label="True")
-    plt.xlabel("$t$", fontsize=14)
-    plt.ylabel("$y$", fontsize=14)
-    plt.legend(fontsize=12)
-    plt.savefig(f"test.png")
-
+    # fig, ax = plt.subplots(figsize=(8, 6))
+    # plt.plot(t["fe"], error["fe"], "bo-", label="Euler")
+    # plt.plot(t["be"], error["be"], "ro-", label="Back Euler")
+    # # plt.plot(t3, u3, "go-", label="True")
+    # plt.xlabel("$t$", fontsize=14)
+    # plt.ylabel("$y$", fontsize=14)
+    # plt.legend(fontsize=12)
+    # plt.savefig(f"test.png")
